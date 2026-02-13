@@ -1,39 +1,25 @@
-name: Deploy SCPs
-
-on:
-  push:
-    branches: [ "main" ]
-
-jobs:
-  terraform:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.14.5
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Terraform Init
-        run: terraform init
-
-      - name: Terraform Validate
-        run: terraform validate
-
       - name: Terraform Plan
-        run: terraform plan -var="root_target_id=${{ secrets.ROOT_TARGET_ID }}" -var="dev_ou_id=${{ secrets.DEV_OU_ID }}"
+        shell: bash
+        run: |
+          ROOT_TARGET_ID="$(printf '%s' "${{ secrets.ROOT_TARGET_ID }}" | tr -d '\r\n' | xargs)"
+          DEV_OU_ID="$(printf '%s' "${{ secrets.DEV_OU_ID }}" | tr -d '\r\n' | xargs)"
+
+          if [[ -z "$ROOT_TARGET_ID" || -z "$DEV_OU_ID" ]]; then
+            echo "ERROR: ROOT_TARGET_ID or DEV_OU_ID is empty. Check GitHub Secrets."
+            exit 1
+          fi
+
+          terraform plan -var="root_target_id=$ROOT_TARGET_ID" -var="dev_ou_id=$DEV_OU_ID"
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve -var="root_target_id=${{ secrets.ROOT_TARGET_ID }}" -var="dev_ou_id=${{ secrets.DEV_OU_ID }}"
+        shell: bash
+        run: |
+          ROOT_TARGET_ID="$(printf '%s' "${{ secrets.ROOT_TARGET_ID }}" | tr -d '\r\n' | xargs)"
+          DEV_OU_ID="$(printf '%s' "${{ secrets.DEV_OU_ID }}" | tr -d '\r\n' | xargs)"
+
+          if [[ -z "$ROOT_TARGET_ID" || -z "$DEV_OU_ID" ]]; then
+            echo "ERROR: ROOT_TARGET_ID or DEV_OU_ID is empty. Check GitHub Secrets."
+            exit 1
+          fi
+
+          terraform apply -auto-approve -var="root_target_id=$ROOT_TARGET_ID" -var="dev_ou_id=$DEV_OU_ID"
